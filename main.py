@@ -18,12 +18,27 @@ import nltk
 from wordcloud import WordCloud
 import io
 import base64
+import os
 
 # Download required NLTK data
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
     nltk.download('punkt')
+
+def flesch_reading_ease(text):
+    return textstat.flesch_reading_ease(text)
+
+def flesch_kincaid_grade(text):
+    return textstat.flesch_kincaid_grade(text)
+
+def get_local_img_as_base64(file_path):
+    if not os.path.exists(file_path):
+        st.error(f"Logo file not found at {file_path}")
+        return None
+    with open(file_path, "rb") as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
 
 # Advanced CSS with animations and modern design
 st.markdown("""
@@ -162,14 +177,17 @@ st.markdown("""
     
     /* Advanced input styling */
     .stTextInput > div > div > input {
-        background: var(--glass-bg);
+        background: rgba(255, 255, 255, 0.9) !important;
         border: 1px solid var(--glass-border);
         border-radius: 15px;
-        color: var(--text-primary);
+        color: #1E1E1E !important;
         padding: 1rem;
         font-size: 1rem;
         transition: all 0.3s ease;
         backdrop-filter: blur(10px);
+    }
+    .stTextInput > div > div > input::placeholder {
+        color: #555 !important;
     }
     
     .stTextInput > div > div > input:focus {
@@ -455,24 +473,28 @@ if 'analytics' not in st.session_state:
     }
 
 # Advanced header with animations
-st.markdown("""
-<div class="main-header">
-    <h1 class="main-title">🚀 AI Content Summarizer Pro</h1>
-    <p class="main-subtitle">Advanced AI-powered content analysis and summarization platform</p>
-    <div>
-        <span class="feature-badge">🎥 YouTube</span>
-        <span class="feature-badge">🌐 Websites</span>
-        <span class="feature-badge">📚 Wikipedia</span>
-        <span class="feature-badge">🧠 AI Analysis</span>
-        <span class="feature-badge">📊 Analytics</span>
-        <span class="feature-badge">🎨 Word Cloud</span>
-        <span class="feature-badge">📈 Sentiment</span>
+img_base64 = get_local_img_as_base64("youtube_logo.png")
+if img_base64:
+    st.markdown(f"""
+    <div class="main-header">
+        <img src="data:image/png;base64,{img_base64}" alt="YouTube Logo" style="width: 200px; margin-bottom: 1rem;">
+        <h1 class="main-title">YouTube AI Summarizer Pro</h1>
+        <p class="main-subtitle">Instantly summarize any YouTube video with the power of AI</p>
+        <div>
+            <span class="feature-badge">🎥 YouTube</span>
+            <span class="feature-badge">🌐 Websites</span>
+            <span class="feature-badge">📚 Wikipedia</span>
+            <span class="feature-badge">🧠 AI Analysis</span>
+            <span class="feature-badge">📊 Analytics</span>
+            <span class="feature-badge">🎨 Word Cloud</span>
+            <span class="feature-badge">📈 Sentiment</span>
+        </div>
     </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 # Enhanced sidebar with advanced features
 with st.sidebar:
+    st.markdown("### Developed by Enes Aydin")
     st.markdown("### ⚙️ Configuration")
     
     # Theme selector
@@ -734,6 +756,15 @@ with col2:
 st.markdown("---")
 
 # Main action button with enhanced styling
+def check_groq_api_key(api_key):
+    if not api_key or not isinstance(api_key, str) or "gsk_" not in api_key:
+        return False
+    try:
+        response = requests.get("https://api.groq.com/openai/v1/models", headers={"Authorization": f"Bearer {api_key}"})
+        return response.status_code == 200
+    except requests.exceptions.RequestException:
+        return False
+
 if st.button("🚀 Generate AI Summary", type="primary", use_container_width=True):
     # Input validation
     content_source = None
@@ -744,8 +775,8 @@ if st.button("🚀 Generate AI Summary", type="primary", use_container_width=Tru
     elif direct_text:
         content_source = ("text", direct_text)
     
-    if not groq_api_key.strip():
-        st.error("🔑 Please provide your Groq API key")
+    if not groq_api_key.strip() or not check_groq_api_key(groq_api_key):
+        st.error("🔑 Please provide a valid Groq API key.")
     elif not content_source:
         st.error("🔗 Please provide content to summarize")
     else:
@@ -850,29 +881,41 @@ if st.button("🚀 Generate AI Summary", type="primary", use_container_width=Tru
                 
                 if content_source[0] == "url":
                     url = content_source[1]
-                    if "youtube.com" in url or "youtu.be" in url:
-                        loader = YoutubeLoader.from_youtube_url(url, add_video_info=False)
-                        content_info['type'] = 'YouTube Video'
-                        content_info['source'] = url
-                    else:
-                        loader = UnstructuredURLLoader(
-                            urls=[url],
-                            ssl_verify=False,
-                            headers={
-                                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-                            }
-                        )
-                        content_info['type'] = 'Website'
-                        content_info['source'] = url
-                    docs = loader.load()
-                    
+                    try:
+                        if "youtube.com" in url or "youtu.be" in url:
+                            loader = YoutubeLoader.from_youtube_url(
+                                url,
+                                add_video_info=False,
+                                language=["en", "en-GB", "id", "de", "es", "fr", "it", "ja", "ko", "pt", "ru", "tr"]
+                            )
+                            content_info['type'] = 'YouTube Video'
+                            content_info['source'] = url
+                        else:
+                            loader = UnstructuredURLLoader(
+                                urls=[url],
+                                ssl_verify=False,
+                                headers={
+                                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+                                }
+                            )
+                            content_info['type'] = 'Website'
+                            content_info['source'] = url
+                        docs = loader.load()
+                    except Exception as e:
+                        st.error(f"❌ Failed to load content from URL: {e}")
+                        st.stop()
+
                 elif content_source[0] == "wikipedia":
-                    query = content_source[1]
-                    loader = WikipediaLoader(query=query, load_max_docs=1)
-                    docs = loader.load()
-                    content_info['type'] = 'Wikipedia Article'
-                    content_info['source'] = f"Wikipedia: {query}"
-                    
+                    try:
+                        query = content_source[1]
+                        loader = WikipediaLoader(query=query, load_max_docs=1)
+                        docs = loader.load()
+                        content_info['type'] = 'Wikipedia Article'
+                        content_info['source'] = f"Wikipedia: {query}"
+                    except Exception as e:
+                        st.error(f"❌ Failed to load content from Wikipedia: {e}")
+                        st.stop()
+
                 elif content_source[0] == "text":
                     # Create a document from direct text
                     from langchain.schema import Document
@@ -1037,14 +1080,20 @@ if st.button("🚀 Generate AI Summary", type="primary", use_container_width=Tru
                 st.markdown('</div>', unsafe_allow_html=True)
                 
                 # Main summary display
-                st.markdown(f"""
+                # We split the rendering into three parts to ensure Streamlit
+                # correctly parses the markdown from the summary.
+                
+                # 1. Open the styled container and print the title
+                st.markdown(f'''
                 <div class="result-container">
                     <h3>📋 {summary_type} Summary</h3>
-                    <div style="color: #ffffff; line-height: 1.8; font-size: 1.1rem; margin-top: 1rem;">
-                        {output_summary}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                ''', unsafe_allow_html=True)
+
+                # 2. Render the summary itself. Streamlit will now correctly handle the '##'
+                st.markdown(output_summary)
+
+                # 3. Close the styled container
+                st.markdown('</div>', unsafe_allow_html=True)
                 
                 # Advanced analysis results
                 if analysis_results:

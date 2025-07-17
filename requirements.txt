@@ -19,9 +19,6 @@ pandas
 openai
 langchain-groq
 duckduckgo_search==5.3.1b1
-pymupdf
-arxiv
-wikipedia
 mysql-connector-python
 SQLAlchemy
 validators==0.28.1
@@ -31,14 +28,9 @@ pytube
 numexpr
 huggingface_hub
 streamlit
-validators
-langchain
-langchain-community
-langchain-groq
-pytube
 textstat
 nltk
 plotly
-pandas
 wordcloud
 requests
+readability-lxml
