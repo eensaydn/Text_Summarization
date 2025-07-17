@@ -1449,4 +1449,4 @@ st.markdown("""
         <span style="margin: 0 1rem;">🔬 Deep Analysis</span>
     </div>
 </div>
-""", unsafe_allow_html=True)
+""", unsafe_allow_html=True) 
